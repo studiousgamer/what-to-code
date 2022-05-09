@@ -34,8 +34,6 @@ async def get_ideas(
         raise HTTPException(status_code=400, detail='Page could not be less than 1')
     if order == GetIdeasOrder.POPULAR:
         query = query.order_by(desc(Idea.likes))
-    if order == GetIdeasOrder.RISING:
-        pass
     if order == GetIdeasOrder.OLDEST:
         query = query.order_by(Idea.created)
     if order == GetIdeasOrder.RECENT:
@@ -103,12 +101,9 @@ def like_idea(
     if idea is None:
         raise HTTPException(status_code=404, detail='Idea was not found')
     like_approver = LikeApprover(redis_client)
-    is_approved = like_approver.allowed_to_like(token, idea.id)
-
-    if is_approved:
+    if is_approved := like_approver.allowed_to_like(token, idea.id):
         idea.likes += 1
-        db.commit()
     else:
         like_approver.remove_like(token, idea.id)
         idea.likes -= 1
-        db.commit()
+    db.commit()
